@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -38,143 +38,148 @@ type LayerInfo struct {
 	Digest    string `json:"digest"`
 }
 
-func NewRegistry() Registry {
+func NewRegistry() (Registry, error) {
+	r := Registry{}
 	if _, err := os.Stat(".credentials"); os.IsNotExist(err) {
-		log.Fatalln("type registry config first.")
+		return r, errors.New("File not found")
 	} else if err != nil {
-		log.Fatalln(err)
+		return r, err
 	}
 
-	r := Registry{}
 	if _, err := toml.DecodeFile(".credentials", &r); err != nil {
-		log.Fatalln(err)
+		return r, err
 	}
-	return r
+	return r, nil
 }
 
-func (r Registry) ListImages() []string {
+func (r Registry) ListImages() ([]string, error) {
 	client := &http.Client{}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/_catalog", r.Host, r.Repository)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalln("Something went wrong, code:", resp.StatusCode)
+		return nil, errors.New("Something went wrong, code:", resp.StatusCode)
 	}
 
 	var repositories Repositories
 	json.NewDecoder(resp.Body).Decode(&repositories)
 
-	return repositories.Images
+	return repositories.Images, nil
 }
 
-func (r Registry) ListTagsByImage(image string) []string {
+func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	client := &http.Client{}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/tags/list", r.Host, r.Repository, image)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalln("Something went wrong, code:", resp.StatusCode)
+		return nil, errors.New("Something went wrong, code:", resp.StatusCode)
 	}
 
 	var imageTags ImageTags
 	json.NewDecoder(resp.Body).Decode(&imageTags)
 
-	return imageTags.Tags
+	return imageTags.Tags, nil
 }
 
-func (r Registry) ImageManifest(image string, tag string) ImageManifest {
+func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error) {
+	var imageManifest ImageManifest
 	client := &http.Client{}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return imageManifest, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return imageManifest, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalln("Something went wrong, code:", resp.StatusCode)
+		return imageManifest, errors.New("Something went wrong, code:", resp.StatusCode)
 	}
 
-	var imageManifest ImageManifest
 	json.NewDecoder(resp.Body).Decode(&imageManifest)
 
-	return imageManifest
+	return imageManifest, nil
 
 }
 
-func (r Registry) DeleteImageByTag(image string, tag string) {
-	sha := r.getImageSHA(image, tag)
+func (r Registry) DeleteImageByTag(image string, tag string) error {
+	sha, err := r.getImageSHA(image, tag)
+	if err != nil {
+		return err
+	}
 	client := &http.Client{}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, sha)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 202 {
-		log.Fatalln("Something went wrong, code:", resp.StatusCode)
+		return errors.New("Something went wrong, code:", resp.StatusCode)
 	}
 
 	fmt.Printf("image has been successful created %s\n", sha)
+
+	return nil
 }
 
-func (r Registry) getImageSHA(image string, tag string) string {
+func (r Registry) getImageSHA(image string, tag string) (string, error) {
 	client := &http.Client{}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
-	return resp.Header.Get("docker-content-digest")
+	return resp.Header.Get("docker-content-digest"), nil
 }
