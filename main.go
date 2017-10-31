@@ -18,8 +18,8 @@ nexus_repository = "{{ .Repository }}"`
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "Registry CLI"
-	app.Usage = "Manage Docker Registries"
+	app.Name = "Nexus CLI"
+	app.Usage = "Manage Docker Private Registry on Nexus"
 	app.Version = "1.0.0-beta"
 	app.Authors = []cli.Author{
 		cli.Author{
@@ -31,7 +31,7 @@ func main() {
 		{
 			Name: "configure",
 			Action: func(c *cli.Context) error {
-				return setNexusCredentials()
+				return setNexusCredentials(c)
 			},
 		},
 		{
@@ -40,7 +40,7 @@ func main() {
 				{
 					Name: "ls",
 					Action: func(c *cli.Context) error {
-						return listImages()
+						return listImages(c)
 					},
 				},
 				{
@@ -52,7 +52,7 @@ func main() {
 						},
 					},
 					Action: func(c *cli.Context) error {
-						return listTagsByImage(c.String("name"))
+						return listTagsByImage(c)
 					},
 				},
 				{
@@ -66,7 +66,7 @@ func main() {
 						},
 					},
 					Action: func(c *cli.Context) error {
-						return showImageInfo(c.String("name"), c.String("tag"))
+						return showImageInfo(c)
 					},
 				},
 				{
@@ -80,7 +80,7 @@ func main() {
 						},
 					},
 					Action: func(c *cli.Context) error {
-						return deleteImageByTag(c.String("name"), c.String("tag"))
+						return deleteImageByTag(c)
 					},
 				},
 			},
@@ -89,7 +89,7 @@ func main() {
 	app.Run(os.Args)
 }
 
-func setNexusCredentials() error {
+func setNexusCredentials(c *cli.Context) error {
 	var hostname, repository, username, password string
 	fmt.Print("Enter Nexus Host: ")
 	fmt.Scan(&hostname)
@@ -129,7 +129,7 @@ func setNexusCredentials() error {
 	return nil
 }
 
-func listImages() error {
+func listImages(c *cli.Context) error {
 	r, err := NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
@@ -145,13 +145,14 @@ func listImages() error {
 	return nil
 }
 
-func listTagsByImage(imgName string) error {
+func listTagsByImage(c *cli.Context) error {
+	var imgName = c.String("name")
 	r, err := NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 	if imgName == "" {
-		return cli.NewExitError("image name is required", 1)
+		cli.ShowSubcommandHelp(c)
 	}
 	tags, err := r.ListTagsByImage(imgName)
 	if err != nil {
@@ -164,13 +165,15 @@ func listTagsByImage(imgName string) error {
 	return nil
 }
 
-func showImageInfo(imgName string, tag string) error {
+func showImageInfo(c *cli.Context) error {
+	var imgName = c.String("name")
+	var tag = c.String("tag")
 	r, err := NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 	if imgName == "" || tag == "" {
-		return cli.NewExitError("image name & tag are required", 1)
+		cli.ShowSubcommandHelp(c)
 	}
 	manifest, err := r.ImageManifest(imgName, tag)
 	if err != nil {
@@ -185,13 +188,15 @@ func showImageInfo(imgName string, tag string) error {
 	return nil
 }
 
-func deleteImageByTag(imgName string, tag string) error {
+func deleteImageByTag(c *cli.Context) error {
+	var imgName = c.String("name")
+	var tag = c.String("tag")
 	r, err := NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
 	if imgName == "" || tag == "" {
-		return cli.NewExitError("image name & tag are required", 1)
+		cli.ShowSubcommandHelp(c)
 	}
 	err = r.DeleteImageByTag(imgName, tag)
 	if err != nil {

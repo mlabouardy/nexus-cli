@@ -70,7 +70,7 @@ func (r Registry) ListImages() ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Something went wrong, code:", resp.StatusCode)
+		return nil, errors.New("Something went wrong, code:")
 	}
 
 	var repositories Repositories
@@ -97,7 +97,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Something went wrong, code:", resp.StatusCode)
+		return nil, errors.New("Something went wrong, code:")
 	}
 
 	var imageTags ImageTags
@@ -125,7 +125,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return imageManifest, errors.New("Something went wrong, code:", resp.StatusCode)
+		return imageManifest, errors.New("Something went wrong, code:")
 	}
 
 	json.NewDecoder(resp.Body).Decode(&imageManifest)
@@ -156,7 +156,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 202 {
-		return errors.New("Something went wrong, code:", resp.StatusCode)
+		return errors.New("Something went wrong, code:")
 	}
 
 	fmt.Printf("image has been successful created %s\n", sha)
