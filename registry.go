@@ -10,6 +10,8 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
+
 type Registry struct {
 	Host       string `toml:"nexus_host"`
 	Username   string `toml:"nexus_username"`
@@ -61,7 +63,7 @@ func (r Registry) ListImages() ([]string, error) {
 		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", ACCEPT_HEADER)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -88,7 +90,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", ACCEPT_HEADER)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -116,7 +118,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 		return imageManifest, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", ACCEPT_HEADER)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -147,7 +149,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 		return err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", ACCEPT_HEADER)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -173,7 +175,7 @@ func (r Registry) getImageSHA(image string, tag string) (string, error) {
 		return "", err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", ACCEPT_HEADER)
 
 	resp, err := client.Do(req)
 	if err != nil {

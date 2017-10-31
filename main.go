@@ -29,22 +29,26 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name: "configure",
+			Name:  "configure",
+			Usage: "Configure Nexus Credentials",
 			Action: func(c *cli.Context) error {
 				return setNexusCredentials(c)
 			},
 		},
 		{
-			Name: "image",
+			Name:  "image",
+			Usage: "Manage Docker Images",
 			Subcommands: []cli.Command{
 				{
-					Name: "ls",
+					Name:  "ls",
+					Usage: "List all images in repository",
 					Action: func(c *cli.Context) error {
 						return listImages(c)
 					},
 				},
 				{
-					Name: "tags",
+					Name:  "tags",
+					Usage: "Display all image tags",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "name, n",
@@ -56,7 +60,8 @@ func main() {
 					},
 				},
 				{
-					Name: "info",
+					Name:  "info",
+					Usage: "Show image details",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name: "name, n",
@@ -70,7 +75,8 @@ func main() {
 					},
 				},
 				{
-					Name: "delete",
+					Name:  "delete",
+					Usage: "Delete image",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name: "name, n",
