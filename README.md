@@ -57,3 +57,7 @@ $ nexus-cli image delete -name mlabouardy/nginx -tag 1.2.0
 ```
 $ nexus-cli image delete -name mlabouardy/nginx -keep 4
 ```
+
+## Tutorials
+
+* http://www.blog.labouardy.com/cleanup-old-docker-images-from-nexus-repository/
