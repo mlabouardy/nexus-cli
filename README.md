@@ -1,14 +1,40 @@
 # nexus-cli
 Nexus CLI for Docker Registry v2
 
-## Available Commands
+## Installation
+
+To install the library and command line program, use the following:
+
 ```
-$ registry configure
+go get -u github.com/mlabouardy/nexus-cli
 ```
 
-// $ registry image ls
-// $ registry image tags -name
-// $ registry image info -name -tag
-// $ registry image delete -name -tag
-// $ registry image delete -name -keep 4
-// $ registry image delete -keep 4
+## Available Commands
+
+```
+$ nexus-cli configure
+```
+
+```
+$ nexus-cli image ls
+```
+
+```
+$ nexus-cli image tags -name mlabouardy/nginx
+```
+
+```
+$ nexus-cli image info -name mlabouardy/nginx -tag 1.2.0
+```
+
+```
+$ nexus-cli image delete -name mlabouardy/nginx -tag 1.2.0
+```
+
+```
+$ nexus-cli image delete -name mlabouardy/nginx -keep 4
+```
+
+```
+$ nexus-cli image delete -keep 4
+```
