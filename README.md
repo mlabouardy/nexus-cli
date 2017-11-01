@@ -54,7 +54,3 @@ $ nexus-cli image delete -name mlabouardy/nginx -tag 1.2.0
 ```
 $ nexus-cli image delete -name mlabouardy/nginx -keep 4
 ```
-
-```
-$ nexus-cli image delete -keep 4
-```

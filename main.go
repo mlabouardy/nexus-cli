@@ -84,9 +84,12 @@ func main() {
 						cli.StringFlag{
 							Name: "tag, t",
 						},
+						cli.StringFlag{
+							Name: "keep, k",
+						},
 					},
 					Action: func(c *cli.Context) error {
-						return deleteImageByTag(c)
+						return deleteImage(c)
 					},
 				},
 			},
@@ -197,19 +200,42 @@ func showImageInfo(c *cli.Context) error {
 	return nil
 }
 
-func deleteImageByTag(c *cli.Context) error {
+func deleteImage(c *cli.Context) error {
 	var imgName = c.String("name")
 	var tag = c.String("tag")
-	r, err := NewRegistry()
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
-	if imgName == "" || tag == "" {
+	var keep = c.Int("keep")
+	if imgName == "" {
+		fmt.Fprintf(c.App.Writer, "You should specify the image name\n")
 		cli.ShowSubcommandHelp(c)
-	}
-	err = r.DeleteImageByTag(imgName, tag)
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
+	} else {
+		r, err := NewRegistry()
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+		if tag == "" {
+			if keep == 0 {
+				fmt.Fprintf(c.App.Writer, "You should either specify the tag or how many images you want to keep\n")
+				cli.ShowSubcommandHelp(c)
+			} else {
+				tags, err := r.ListTagsByImage(imgName)
+				if err != nil {
+					return cli.NewExitError(err.Error(), 1)
+				}
+				if len(tags) >= keep {
+					for _, tag := range tags[:len(tags)-keep] {
+						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
+						r.DeleteImageByTag(imgName, tag)
+					}
+				} else {
+					fmt.Printf("Only %d images are available\n", len(tags))
+				}
+			}
+		} else {
+			err = r.DeleteImageByTag(imgName, tag)
+			if err != nil {
+				return cli.NewExitError(err.Error(), 1)
+			}
+		}
 	}
 	return nil
 }
