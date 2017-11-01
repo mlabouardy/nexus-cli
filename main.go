@@ -76,7 +76,7 @@ func main() {
 				},
 				{
 					Name:  "delete",
-					Usage: "Delete image",
+					Usage: "Delete an image",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name: "name, n",
@@ -91,6 +91,9 @@ func main() {
 				},
 			},
 		},
+	}
+	app.CommandNotFound = func(c *cli.Context, command string) {
+		fmt.Fprintf(c.App.Writer, "Wrong command %q !", command)
 	}
 	app.Run(os.Args)
 }
@@ -210,11 +213,3 @@ func deleteImageByTag(c *cli.Context) error {
 	}
 	return nil
 }
-
-// $ registry configure
-// $ registry image ls
-// $ registry image tags -name
-// $ registry image info -name -tag
-// $ registry image delete -name -tag
-// $ registry image delete -name -keep 4
-// $ registry image delete -keep 4

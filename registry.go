@@ -43,7 +43,7 @@ type LayerInfo struct {
 func NewRegistry() (Registry, error) {
 	r := Registry{}
 	if _, err := os.Stat(".credentials"); os.IsNotExist(err) {
-		return r, errors.New("File not found")
+		return r, errors.New(".crendetials file not found")
 	} else if err != nil {
 		return r, err
 	}
@@ -72,7 +72,7 @@ func (r Registry) ListImages() ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Something went wrong, code:")
+		return nil, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
 	}
 
 	var repositories Repositories
@@ -99,7 +99,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New("Something went wrong, code:")
+		return nil, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
 	}
 
 	var imageTags ImageTags
@@ -127,7 +127,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return imageManifest, errors.New("Something went wrong, code:")
+		return imageManifest, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
 	}
 
 	json.NewDecoder(resp.Body).Decode(&imageManifest)
@@ -158,10 +158,10 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 202 {
-		return errors.New("Something went wrong, code:")
+		return errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
 	}
 
-	fmt.Printf("image has been successful created %s\n", sha)
+	fmt.Printf("%s:%s has been successful deleted", image, tag)
 
 	return nil
 }
@@ -182,6 +182,10 @@ func (r Registry) getImageSHA(image string, tag string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+	}
 
 	return resp.Header.Get("docker-content-digest"), nil
 }
