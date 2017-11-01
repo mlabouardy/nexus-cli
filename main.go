@@ -153,7 +153,7 @@ func listImages(c *cli.Context) error {
 	for _, image := range images {
 		fmt.Println(image)
 	}
-	fmt.Printf("Total images: %d", len(images))
+	fmt.Printf("Total images: %d\n", len(images))
 	return nil
 }
 
@@ -173,7 +173,7 @@ func listTagsByImage(c *cli.Context) error {
 	for _, tag := range tags {
 		fmt.Println(tag)
 	}
-	fmt.Printf("There are %d images for %s", len(tags), imgName)
+	fmt.Printf("There are %d images for %s\n", len(tags), imgName)
 	return nil
 }
 

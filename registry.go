@@ -43,7 +43,7 @@ type LayerInfo struct {
 func NewRegistry() (Registry, error) {
 	r := Registry{}
 	if _, err := os.Stat(".credentials"); os.IsNotExist(err) {
-		return r, errors.New(".crendetials file not found")
+		return r, errors.New(".crendetials file not found\n")
 	} else if err != nil {
 		return r, err
 	}
