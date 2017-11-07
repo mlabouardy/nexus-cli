@@ -6,7 +6,11 @@
 
 Nexus CLI for Docker Registry
 
+## Usage
+
+<div align="center">
 <img src="example.png"/>
+</div>
 
 ## Download
 
@@ -22,6 +26,24 @@ wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/linux/nexus-cli
 
 ```
 wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/windows/nexus-cli
+```
+
+### Mac OS X:
+
+```
+wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/osx/nexus-cli
+```
+
+### OpenBSD:
+
+```
+wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/openbsd/nexus-cli
+```
+
+### FreeBSD:
+
+```
+wget https://s3.eu-west-2.amazonaws.com/nexus-cli/1.0.0-beta/freebsd/nexus-cli
 ```
 
 ## Installation
@@ -60,4 +82,4 @@ $ nexus-cli image delete -name mlabouardy/nginx -keep 4
 
 ## Tutorials
 
-* http://www.blog.labouardy.com/cleanup-old-docker-images-from-nexus-repository/
+* [Cleanup old Docker images from Nexus Repository](http://www.blog.labouardy.com/cleanup-old-docker-images-from-nexus-repository/)
