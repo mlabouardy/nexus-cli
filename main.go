@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"os"
 
+	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
 )
 
@@ -142,7 +143,7 @@ func setNexusCredentials(c *cli.Context) error {
 }
 
 func listImages(c *cli.Context) error {
-	r, err := NewRegistry()
+	r, err := registry.NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -159,7 +160,7 @@ func listImages(c *cli.Context) error {
 
 func listTagsByImage(c *cli.Context) error {
 	var imgName = c.String("name")
-	r, err := NewRegistry()
+	r, err := registry.NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -180,7 +181,7 @@ func listTagsByImage(c *cli.Context) error {
 func showImageInfo(c *cli.Context) error {
 	var imgName = c.String("name")
 	var tag = c.String("tag")
-	r, err := NewRegistry()
+	r, err := registry.NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -208,7 +209,7 @@ func deleteImage(c *cli.Context) error {
 		fmt.Fprintf(c.App.Writer, "You should specify the image name\n")
 		cli.ShowSubcommandHelp(c)
 	} else {
-		r, err := NewRegistry()
+		r, err := registry.NewRegistry()
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
