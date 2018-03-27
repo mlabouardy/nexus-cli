@@ -1,6 +1,8 @@
 version: 2
 jobs:
   build:
+    environment:
+      GOBIN: "/bin"
     docker:
       - image: golang:1.8
 
@@ -14,7 +16,7 @@ jobs:
           command: go get -v
           
       - store_artifacts:
-          path: /go/src/github.com/gtonic/nexus-cli
+          path: /bin
 
       - run:
           name: Run Unit Tests
