@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     environment:
-      GOBIN: "/bin"
+      GOBIN: "/output"
     docker:
       - image: golang:1.8
 
@@ -16,7 +16,7 @@ jobs:
           command: go get -v
           
       - store_artifacts:
-          path: /bin
+          path: /output
 
       - run:
           name: Run Unit Tests
