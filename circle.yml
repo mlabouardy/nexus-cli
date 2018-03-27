@@ -12,6 +12,9 @@ jobs:
       - run:
           name: Install dependencies
           command: go get -v
+          
+      - store_artifacts:
+          path: /go/src/github.com/gtonic/nexus-cli
 
       - run:
           name: Run Unit Tests
