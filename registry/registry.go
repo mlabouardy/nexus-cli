@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"crypto/tls"
 
 	"github.com/BurntSushi/toml"
 )
@@ -55,7 +56,10 @@ func NewRegistry() (Registry, error) {
 }
 
 func (r Registry) ListImages() ([]string, error) {
-	client := &http.Client{}
+	tr := &http.Transport{
+        	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+   	}
+	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/_catalog", r.Host, r.Repository)
 	req, err := http.NewRequest("GET", url, nil)
@@ -82,7 +86,10 @@ func (r Registry) ListImages() ([]string, error) {
 }
 
 func (r Registry) ListTagsByImage(image string) ([]string, error) {
-	client := &http.Client{}
+	tr := &http.Transport{
+        	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+   	}
+	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/tags/list", r.Host, r.Repository, image)
 	req, err := http.NewRequest("GET", url, nil)
@@ -110,7 +117,10 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 
 func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error) {
 	var imageManifest ImageManifest
-	client := &http.Client{}
+	tr := &http.Transport{
+        	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+   	}
+	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
@@ -141,7 +151,10 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 	if err != nil {
 		return err
 	}
-	client := &http.Client{}
+	tr := &http.Transport{
+        	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+   	}
+	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, sha)
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -167,7 +180,10 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 }
 
 func (r Registry) getImageSHA(image string, tag string) (string, error) {
-	client := &http.Client{}
+	tr := &http.Transport{
+        	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+   	}
+	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
