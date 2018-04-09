@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"syscall"
 
 	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
@@ -112,7 +113,7 @@ func setNexusCredentials(c *cli.Context) error {
 	fmt.Print("Enter Nexus Username: ")
 	fmt.Scan(&username)
 	fmt.Print("Enter Nexus Password: ")
-	bytePassword, err := terminal.ReadPassword(0)
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return fmt.Errorf("Could not read password from terminal: %v", err)
 	}
