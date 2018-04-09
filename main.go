@@ -7,6 +7,7 @@ import (
 
 	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -111,7 +112,11 @@ func setNexusCredentials(c *cli.Context) error {
 	fmt.Print("Enter Nexus Username: ")
 	fmt.Scan(&username)
 	fmt.Print("Enter Nexus Password: ")
-	fmt.Scan(&password)
+	bytePassword, err := terminal.ReadPassword(0)
+	if err != nil {
+		return fmt.Errorf("Could not read password from terminal: %v", err)
+	}
+	password = string(bytePassword)
 
 	data := struct {
 		Host       string

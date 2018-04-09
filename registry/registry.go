@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
 
@@ -51,6 +52,7 @@ func NewRegistry() (Registry, error) {
 	if _, err := toml.DecodeFile(".credentials", &r); err != nil {
 		return r, err
 	}
+	r.Password = html.UnescapeString(r.Password)
 	return r, nil
 }
 
