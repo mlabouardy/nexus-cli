@@ -4,13 +4,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/mitchellh/go-homedir"
 )
 
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
+
+const (
+	CREDENTIALS_TEMPLATES = `# Nexus Credentials
+nexus_host = "{{ .Host }}"
+nexus_username = "{{ .Username }}"
+nexus_password = "{{ .Password }}"
+nexus_repository = "{{ .Repository }}"`
+)
+
+var (
+	credentialsPath = "/.nexus-cli/"
+	credentialsFile = ".credentials"
+	manifests       = "%s/repository/%s/v2/%s/manifests/%s"
+)
 
 type Registry struct {
 	Host       string `toml:"nexus_host"`
@@ -40,15 +56,51 @@ type LayerInfo struct {
 	Digest    string `json:"digest"`
 }
 
+func SetupCredentials(registry Registry) error {
+	home, err := homedir.Dir()
+	os.MkdirAll(home+credentialsPath, os.ModePerm)
+
+	var fullPath = GetCredentialsPath()
+
+	tmpl, err := template.New(fullPath).Parse(CREDENTIALS_TEMPLATES)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(fullPath)
+	if err != nil {
+		return err
+	}
+
+	err = tmpl.Execute(f, registry)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetCredentialsPath() (string, error) {
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Print("Cannot get user home folder: " + err.Error())
+		return "", err
+	}
+	return home + credentialsPath + credentialsFile, err
+}
+
 func NewRegistry() (Registry, error) {
 	r := Registry{}
-	if _, err := os.Stat(".credentials"); os.IsNotExist(err) {
-		return r, errors.New(".crendetials file not found\n")
+	credentialsFullPath, err := GetCredentialsPath()
+	if err != nil {
+		return r, err
+	}
+	if _, err := os.Stat(credentialsFullPath); os.IsNotExist(err) {
+		return r, errors.New(credentialsFullPath + " file not found\n")
 	} else if err != nil {
 		return r, err
 	}
 
-	if _, err := toml.DecodeFile(".credentials", &r); err != nil {
+	if _, err := toml.DecodeFile(credentialsFullPath, &r); err != nil {
 		return r, err
 	}
 	return r, nil
@@ -112,7 +164,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 	var imageManifest ImageManifest
 	client := &http.Client{}
 
-	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
+	url := fmt.Sprintf(manifests, r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return imageManifest, err
@@ -143,7 +195,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 	}
 	client := &http.Client{}
 
-	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, sha)
+	url := fmt.Sprintf(manifests, r.Host, r.Repository, image, sha)
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
@@ -169,7 +221,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 func (r Registry) getImageSHA(image string, tag string) (string, error) {
 	client := &http.Client{}
 
-	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
+	url := fmt.Sprintf(manifests, r.Host, r.Repository, image, tag)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err

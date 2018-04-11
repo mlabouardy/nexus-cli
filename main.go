@@ -2,19 +2,10 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"os"
 
 	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
-)
-
-const (
-	CREDENTIALS_TEMPLATES = `# Nexus Credentials
-nexus_host = "{{ .Host }}"
-nexus_username = "{{ .Username }}"
-nexus_password = "{{ .Password }}"
-nexus_repository = "{{ .Repository }}"`
 )
 
 func main() {
@@ -113,29 +104,15 @@ func setNexusCredentials(c *cli.Context) error {
 	fmt.Print("Enter Nexus Password: ")
 	fmt.Scan(&password)
 
-	data := struct {
-		Host       string
-		Username   string
-		Password   string
-		Repository string
-	}{
+	data := registry.Registry{
 		hostname,
 		username,
 		password,
 		repository,
 	}
 
-	tmpl, err := template.New(".credentials").Parse(CREDENTIALS_TEMPLATES)
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
+	err := registry.SetupCredentials(data)
 
-	f, err := os.Create(".credentials")
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
-
-	err = tmpl.Execute(f, data)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
