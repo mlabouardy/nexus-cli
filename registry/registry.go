@@ -12,6 +12,7 @@ import (
 )
 
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
+const CREDENTIALS_FILE = ".credentials"
 
 type Registry struct {
 	Host       string `toml:"nexus_host"`
@@ -43,13 +44,13 @@ type LayerInfo struct {
 
 func NewRegistry() (Registry, error) {
 	r := Registry{}
-	if _, err := os.Stat(".credentials"); os.IsNotExist(err) {
-		return r, errors.New(".crendetials file not found\n")
+	if _, err := os.Stat(CREDENTIALS_FILE); os.IsNotExist(err) {
+		return r, errors.New(fmt.Sprintf("%s file not found\n", CREDENTIALS_FILE))
 	} else if err != nil {
 		return r, err
 	}
 
-	if _, err := toml.DecodeFile(".credentials", &r); err != nil {
+	if _, err := toml.DecodeFile(CREDENTIALS_FILE, &r); err != nil {
 		return r, err
 	}
 	r.Password = html.UnescapeString(r.Password)

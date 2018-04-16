@@ -174,6 +174,12 @@ func listTagsByImage(c *cli.Context) error {
 		cli.ShowSubcommandHelp(c)
 	}
 	tags, err := r.ListTagsByImage(imgName)
+
+	compareStringNumber := func(str1, str2 string) bool {
+		return extractNumberFromString(str1) < extractNumberFromString(str2)
+	}
+	Compare(compareStringNumber).Sort(tags)
+
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -225,6 +231,10 @@ func deleteImage(c *cli.Context) error {
 				cli.ShowSubcommandHelp(c)
 			} else {
 				tags, err := r.ListTagsByImage(imgName)
+				compareStringNumber := func(str1, str2 string) bool {
+					return extractNumberFromString(str1) < extractNumberFromString(str2)
+				}
+				Compare(compareStringNumber).Sort(tags)
 				if err != nil {
 					return cli.NewExitError(err.Error(), 1)
 				}
