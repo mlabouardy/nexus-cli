@@ -69,6 +69,10 @@ $ nexus-cli image tags -name mlabouardy/nginx
 ```
 
 ```
+$ nexus-cli image tags -name mlabouardy/nginx -sort semver
+```
+
+```
 $ nexus-cli image info -name mlabouardy/nginx -tag 1.2.0
 ```
 
@@ -78,6 +82,10 @@ $ nexus-cli image delete -name mlabouardy/nginx -tag 1.2.0
 
 ```
 $ nexus-cli image delete -name mlabouardy/nginx -keep 4
+```
+
+```
+$ nexus-cli image delete -name mlabouardy/nginx -keep 4 -sort semver
 ```
 
 ## Tutorials

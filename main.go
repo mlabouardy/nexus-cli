@@ -7,6 +7,7 @@ import (
 
 	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
+	"github.com/blang/semver"
 )
 
 const (
@@ -55,6 +56,10 @@ func main() {
 							Name:  "name, n",
 							Usage: "List tags by image name",
 						},
+						cli.StringFlag{
+							Name: "sort, s",
+							Usage: "Sort tags by semantic version, assuming all tags are semver except latest.",
+						},
 					},
 					Action: func(c *cli.Context) error {
 						return listTagsByImage(c)
@@ -87,6 +92,9 @@ func main() {
 						},
 						cli.StringFlag{
 							Name: "keep, k",
+						},
+						cli.StringFlag{
+							Name: "sort, s",
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -160,6 +168,11 @@ func listImages(c *cli.Context) error {
 
 func listTagsByImage(c *cli.Context) error {
 	var imgName = c.String("name")
+	var sort = c.String("sort")
+	if sort != "semver" {
+		sort = "default"
+	}
+
 	r, err := registry.NewRegistry()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
@@ -169,9 +182,7 @@ func listTagsByImage(c *cli.Context) error {
 	}
 	tags, err := r.ListTagsByImage(imgName)
 
-	compareStringNumber := func(str1, str2 string) bool {
-		return extractNumberFromString(str1) < extractNumberFromString(str2)
-	}
+	compareStringNumber := getSortComparisonStrategy(sort)
 	Compare(compareStringNumber).Sort(tags)
 
 	if err != nil {
@@ -211,6 +222,11 @@ func deleteImage(c *cli.Context) error {
 	var imgName = c.String("name")
 	var tag = c.String("tag")
 	var keep = c.Int("keep")
+	var sort = c.String("sort")
+	if sort != "semver" {
+		sort = "default"
+	}
+
 	if imgName == "" {
 		fmt.Fprintf(c.App.Writer, "You should specify the image name\n")
 		cli.ShowSubcommandHelp(c)
@@ -225,10 +241,10 @@ func deleteImage(c *cli.Context) error {
 				cli.ShowSubcommandHelp(c)
 			} else {
 				tags, err := r.ListTagsByImage(imgName)
-				compareStringNumber := func(str1, str2 string) bool {
-					return extractNumberFromString(str1) < extractNumberFromString(str2)
-				}
+
+				compareStringNumber := getSortComparisonStrategy(sort)
 				Compare(compareStringNumber).Sort(tags)
+
 				if err != nil {
 					return cli.NewExitError(err.Error(), 1)
 				}
@@ -249,4 +265,36 @@ func deleteImage(c *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+func getSortComparisonStrategy(sort string) func(str1, str2 string) bool{
+	var compareStringNumber func(str1, str2 string) bool
+
+	if sort == "default" {
+		compareStringNumber = func(str1, str2 string) bool {
+			return extractNumberFromString(str1) < extractNumberFromString(str2)
+		}
+	}
+
+	if sort == "semver" {
+		compareStringNumber = func(str1, str2 string) bool {
+			if str1 == "latest" {
+				return false
+			}
+			if str2 == "latest" {
+				return true
+			}
+			version1, err1 := semver.Make(str1)
+			if err1 != nil {
+			    fmt.Printf("Error parsing version1: %q\n", err1)
+			}
+			version2, err2 := semver.Make(str2)
+			if err2 != nil {
+			    fmt.Printf("Error parsing version2: %q\n", err2)
+			}
+			return version1.LT(version2)
+		}
+	}
+
+	return compareStringNumber
 }
