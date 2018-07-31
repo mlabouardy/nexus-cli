@@ -58,7 +58,7 @@ func main() {
 						},
 						cli.StringFlag{
 							Name: "sort, s",
-							Usage: "Assume all tags are semver except latest",
+							Usage: "Sort tags by semantic version, assuming all tags are semver except latest.",
 						},
 					},
 					Action: func(c *cli.Context) error {
@@ -182,7 +182,7 @@ func listTagsByImage(c *cli.Context) error {
 	}
 	tags, err := r.ListTagsByImage(imgName)
 
-	compareStringNumber := getSortComparisonFunc(sort)
+	compareStringNumber := getSortComparisonStrategy(sort)
 	Compare(compareStringNumber).Sort(tags)
 
 	if err != nil {
@@ -242,7 +242,7 @@ func deleteImage(c *cli.Context) error {
 			} else {
 				tags, err := r.ListTagsByImage(imgName)
 
-				compareStringNumber := getSortComparisonFunc(sort)
+				compareStringNumber := getSortComparisonStrategy(sort)
 				Compare(compareStringNumber).Sort(tags)
 
 				if err != nil {
@@ -267,7 +267,7 @@ func deleteImage(c *cli.Context) error {
 	return nil
 }
 
-func getSortComparisonFunc(sort string) func(str1, str2 string) bool{
+func getSortComparisonStrategy(sort string) func(str1, str2 string) bool{
 	var compareStringNumber func(str1, str2 string) bool
 
 	if sort == "default" {
