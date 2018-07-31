@@ -2,58 +2,71 @@ package registry
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"net/http"
-	"os"
+
+	"github.com/BurntSushi/toml"
+	"github.com/caarlos0/env"
 )
 
-const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
-const CREDENTIALS_FILE = ".credentials"
+const acceptHeader = "application/vnd.docker.distribution.manifest.v2+json"
+const credentialsFile = ".credentials"
 
+// Registry struct to access registry information
 type Registry struct {
-	Host       string `toml:"nexus_host"`
-	Username   string `toml:"nexus_username"`
-	Password   string `toml:"nexus_password"`
-	Repository string `toml:"nexus_repository"`
+	Host       string `toml:"nexus_host" env:"NEXUS_CLI_HOST"`
+	Username   string `toml:"nexus_username" env:"NEXUS_CLI_USERNAME"`
+	Password   string `toml:"nexus_password" env:"NEXUS_CLI_PASSWORD"`
+	Repository string `toml:"nexus_repository" env:"NEXUS_CLI_REPOSITORY"`
 }
 
+// Repositories struct containing a slice of images
 type Repositories struct {
 	Images []string `json:"repositories"`
 }
 
+// ImageTags struct containing a slice of all tags for a given docker image name
 type ImageTags struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
 }
 
+// ImageManifest struct for docker image information on schema and layers
 type ImageManifest struct {
 	SchemaVersion int64       `json:"schemaVersion"`
 	MediaType     string      `json:"mediaType"`
 	Config        LayerInfo   `json:"config"`
 	Layers        []LayerInfo `json:"layers"`
 }
+
+// LayerInfo struct for docker image meta information
 type LayerInfo struct {
 	MediaType string `json:"mediaType"`
 	Size      int64  `json:"size"`
 	Digest    string `json:"digest"`
 }
 
+// NewRegistry uses local .credentials file or environment variables to return a Registry struct
 func NewRegistry() (Registry, error) {
 	r := Registry{}
-	if _, err := os.Stat(CREDENTIALS_FILE); os.IsNotExist(err) {
-		return r, errors.New(fmt.Sprintf("%s file not found\n", CREDENTIALS_FILE))
-	} else if err != nil {
-		return r, err
-	}
+	toml.DecodeFile(credentialsFile, &r)
 
-	if _, err := toml.DecodeFile(CREDENTIALS_FILE, &r); err != nil {
-		return r, err
+	// Parse environment variables by struct `env`-tags
+	env.Parse(&r)
+
+	if len(r.Host) == 0 {
+		return r, fmt.Errorf("Problem reading host from configuration")
+	} else if len(r.Username) == 0 {
+		return r, fmt.Errorf("Problem reading username from configuration")
+	} else if len(r.Password) == 0 {
+		return r, fmt.Errorf("Problem reading password from configuration")
+	} else if len(r.Repository) == 0 {
+		return r, fmt.Errorf("Problem reading repository from configuration")
 	}
 	return r, nil
 }
 
+// ListImages returns image names as a slice of strings
 func (r Registry) ListImages() ([]string, error) {
 	client := &http.Client{}
 
@@ -63,7 +76,7 @@ func (r Registry) ListImages() ([]string, error) {
 		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", ACCEPT_HEADER)
+	req.Header.Add("Accept", acceptHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -72,7 +85,7 @@ func (r Registry) ListImages() ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+		return nil, fmt.Errorf("HTTP Code: %d", resp.StatusCode)
 	}
 
 	var repositories Repositories
@@ -81,6 +94,7 @@ func (r Registry) ListImages() ([]string, error) {
 	return repositories.Images, nil
 }
 
+// ListTagsByImage expects an image name as string to return a slice of tage names
 func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	client := &http.Client{}
 
@@ -90,7 +104,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 		return nil, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", ACCEPT_HEADER)
+	req.Header.Add("Accept", acceptHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -99,7 +113,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+		return nil, fmt.Errorf("HTTP Code: %d", resp.StatusCode)
 	}
 
 	var imageTags ImageTags
@@ -108,6 +122,7 @@ func (r Registry) ListTagsByImage(image string) ([]string, error) {
 	return imageTags.Tags, nil
 }
 
+// ImageManifest expects image name and tag as string to return an ImageManifest struct
 func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error) {
 	var imageManifest ImageManifest
 	client := &http.Client{}
@@ -118,7 +133,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 		return imageManifest, err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", ACCEPT_HEADER)
+	req.Header.Add("Accept", acceptHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -127,7 +142,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return imageManifest, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+		return imageManifest, fmt.Errorf("HTTP Code: %d", resp.StatusCode)
 	}
 
 	json.NewDecoder(resp.Body).Decode(&imageManifest)
@@ -136,6 +151,7 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 
 }
 
+// DeleteImageByTag expects an image name and a tag to delete an image tag
 func (r Registry) DeleteImageByTag(image string, tag string) error {
 	sha, err := r.getImageSHA(image, tag)
 	if err != nil {
@@ -149,7 +165,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 		return err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", ACCEPT_HEADER)
+	req.Header.Add("Accept", acceptHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -158,7 +174,7 @@ func (r Registry) DeleteImageByTag(image string, tag string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 202 {
-		return errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+		return fmt.Errorf("HTTP Code: %d", resp.StatusCode)
 	}
 
 	fmt.Printf("%s:%s has been successful deleted\n", image, tag)
@@ -175,7 +191,7 @@ func (r Registry) getImageSHA(image string, tag string) (string, error) {
 		return "", err
 	}
 	req.SetBasicAuth(r.Username, r.Password)
-	req.Header.Add("Accept", ACCEPT_HEADER)
+	req.Header.Add("Accept", acceptHeader)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -184,7 +200,7 @@ func (r Registry) getImageSHA(image string, tag string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+		return "", fmt.Errorf("HTTP Code: %d", resp.StatusCode)
 	}
 
 	return resp.Header.Get("docker-content-digest"), nil
