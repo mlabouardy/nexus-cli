@@ -77,8 +77,24 @@ $ nexus-cli image delete -name mlabouardy/nginx -tag 1.2.0
 ```
 
 ```
+$ nexus-cli image tags -name mlabouardy/nginx -v -e v1 -e latest
+```
+
+```
+$ nexus-cli image tags -name mlabouardy/nginx -e 1.2
+```
+
+```
+$ nexus-cli image delete -name mlabouardy/nginx -e '!feature'
+```
+
+```
 $ nexus-cli image delete -name mlabouardy/nginx -keep 4
 ```
+
+## Caveats
+
+Deletion of image tags is done using a tag name, but rather using a checksum of the image. If you push an image to a registry more than once (e.g. as `1.0.0` and also as `latest`). The deletion will still use the image checksum. Thus the deletion of a single tag is no problem. If the tag is not unique, the deletion will **delete a random tag** matching the checksum.
 
 ## Tutorials
 
