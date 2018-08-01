@@ -5,12 +5,12 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/mlabouardy/nexus-cli/registry"
+	"github.com/moepi/nexus-cli/registry"
 	"github.com/urfave/cli"
 )
 
 const (
-	CREDENTIALS_TEMPLATES = `# Nexus Credentials
+	credentialsTemplates = `# Nexus Credentials
 nexus_host = "{{ .Host }}"
 nexus_username = "{{ .Username }}"
 nexus_password = "{{ .Password }}"
@@ -21,7 +21,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Nexus CLI"
 	app.Usage = "Manage Docker Private Registry on Nexus"
-	app.Version = "1.0.0-beta"
+	app.Version = "1.0.0-beta-2"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Mohamed Labouardy",
@@ -125,7 +125,7 @@ func setNexusCredentials(c *cli.Context) error {
 		repository,
 	}
 
-	tmpl, err := template.New(".credentials").Parse(CREDENTIALS_TEMPLATES)
+	tmpl, err := template.New(".credentials").Parse(credentialsTemplates)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
