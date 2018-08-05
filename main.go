@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"os"
+	"regexp"
+	"strings"
 
-	"github.com/mlabouardy/nexus-cli/registry"
+	"github.com/moepi/nexus-cli/registry"
 	"github.com/urfave/cli"
 )
 
 const (
-	CREDENTIALS_TEMPLATES = `# Nexus Credentials
+	credentialsTemplates = `# Nexus Credentials
 nexus_host = "{{ .Host }}"
 nexus_username = "{{ .Username }}"
 nexus_password = "{{ .Password }}"
@@ -21,7 +24,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Nexus CLI"
 	app.Usage = "Manage Docker Private Registry on Nexus"
-	app.Version = "1.0.0-beta"
+	app.Version = "1.0.0-beta-2"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Mohamed Labouardy",
@@ -55,6 +58,14 @@ func main() {
 							Name:  "name, n",
 							Usage: "List tags by image name",
 						},
+						cli.StringSliceFlag{
+							Name:  "expression, e",
+							Usage: "Filter tags by regular expression",
+						},
+						cli.BoolFlag{
+							Name:  "invert, v",
+							Usage: "Invert filter results",
+						},
 					},
 					Action: func(c *cli.Context) error {
 						return listTagsByImage(c)
@@ -77,7 +88,7 @@ func main() {
 				},
 				{
 					Name:  "delete",
-					Usage: "Delete an image",
+					Usage: "Delete images",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name: "name, n",
@@ -88,9 +99,17 @@ func main() {
 						cli.StringFlag{
 							Name: "keep, k",
 						},
+						cli.StringSliceFlag{
+							Name:  "expression, e",
+							Usage: "Filter tags by regular expression",
+						},
+						cli.BoolFlag{
+							Name:  "invert, v",
+							Usage: "Invert results filter expressions",
+						},
 					},
 					Action: func(c *cli.Context) error {
-						return deleteImage(c)
+						return deleteImages(c)
 					},
 				},
 			},
@@ -125,7 +144,7 @@ func setNexusCredentials(c *cli.Context) error {
 		repository,
 	}
 
-	tmpl, err := template.New(".credentials").Parse(CREDENTIALS_TEMPLATES)
+	tmpl, err := template.New(".credentials").Parse(credentialsTemplates)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
@@ -158,6 +177,36 @@ func listImages(c *cli.Context) error {
 	return nil
 }
 
+func filterTagsByRegex(tags []string, expressions []string, invert bool) ([]string, error) {
+	var retTags []string
+	if len(expressions) == 0 {
+		return tags, nil
+	}
+	for _, tag := range tags {
+		tagMiss := false
+		for _, expression := range expressions {
+			var expressionBool = !invert
+			if strings.HasPrefix(expression, "!") {
+				expressionBool = invert
+				expression = strings.Trim(expression, "!")
+			}
+			retVal, err := regexp.MatchString(expression, tag)
+			if err != nil {
+				return retTags, err
+			}
+			if retVal != expressionBool {
+				tagMiss = true
+				break
+			}
+		}
+		// tag must match all expression, so continue with next tag on match
+		if !tagMiss {
+			retTags = append(retTags, tag)
+		}
+	}
+	return retTags, nil
+}
+
 func listTagsByImage(c *cli.Context) error {
 	var imgName = c.String("name")
 	r, err := registry.NewRegistry()
@@ -168,6 +217,12 @@ func listTagsByImage(c *cli.Context) error {
 		cli.ShowSubcommandHelp(c)
 	}
 	tags, err := r.ListTagsByImage(imgName)
+
+	// filter tags by expressions
+	tags, err = filterTagsByRegex(tags, c.StringSlice("expression"), c.Bool("invert"))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	compareStringNumber := func(str1, str2 string) bool {
 		return extractNumberFromString(str1) < extractNumberFromString(str2)
@@ -207,46 +262,71 @@ func showImageInfo(c *cli.Context) error {
 	return nil
 }
 
-func deleteImage(c *cli.Context) error {
+func deleteImages(c *cli.Context) error {
 	var imgName = c.String("name")
 	var tag = c.String("tag")
 	var keep = c.Int("keep")
+	var invert = c.Bool("invert")
+
+	// Show help if no image name is present
 	if imgName == "" {
 		fmt.Fprintf(c.App.Writer, "You should specify the image name\n")
 		cli.ShowSubcommandHelp(c)
-	} else {
-		r, err := registry.NewRegistry()
+		return nil
+	}
+
+	r, err := registry.NewRegistry()
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+
+	// if a specific tag is provided, ignore all other options
+	if tag != "" {
+		err = r.DeleteImageByTag(imgName, tag)
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		if tag == "" {
-			if keep == 0 {
-				fmt.Fprintf(c.App.Writer, "You should either specify the tag or how many images you want to keep\n")
-				cli.ShowSubcommandHelp(c)
-			} else {
-				tags, err := r.ListTagsByImage(imgName)
-				compareStringNumber := func(str1, str2 string) bool {
-					return extractNumberFromString(str1) < extractNumberFromString(str2)
-				}
-				Compare(compareStringNumber).Sort(tags)
-				if err != nil {
-					return cli.NewExitError(err.Error(), 1)
-				}
-				if len(tags) >= keep {
-					for _, tag := range tags[:len(tags)-keep] {
-						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
-						r.DeleteImageByTag(imgName, tag)
-					}
-				} else {
-					fmt.Printf("Only %d images are available\n", len(tags))
-				}
-			}
-		} else {
+		return nil
+	}
+
+	// Get list of tags and filter them by all expressions provided
+	tags, err := r.ListTagsByImage(imgName)
+	tags, err = filterTagsByRegex(tags, c.StringSlice("expression"), invert)
+	if err != nil {
+		fmt.Fprintf(c.App.Writer, "Could not filter tags by regular expressions: %s\n", err)
+		return err
+	}
+
+	// if no keep is specified, all flags are unset. Show help and exit.
+	if c.IsSet("keep") == false && len(c.StringSlice("expression")) == 0 {
+		fmt.Fprintf(c.App.Writer, "You should either specify use tag / filter expressions, or specify how many images you want to keep\n")
+		cli.ShowSubcommandHelp(c)
+		return fmt.Errorf("You should either specify use tag / filter expressions, or specify how many images you want to keep")
+	}
+
+	if len(tags) == 0 && !c.IsSet("keep") {
+		fmt.Fprintf(c.App.Writer, "No images selected for deletion\n")
+		return fmt.Errorf("No images selected for deletion")
+	}
+
+	// Remove images by using keep flag
+	compareStringNumber := func(str1, str2 string) bool {
+		return extractNumberFromString(str1) < extractNumberFromString(str2)
+	}
+	Compare(compareStringNumber).Sort(tags)
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
+	if len(tags) >= keep {
+		for _, tag := range tags[:len(tags)-keep] {
+			fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
 			err = r.DeleteImageByTag(imgName, tag)
 			if err != nil {
 				return cli.NewExitError(err.Error(), 1)
 			}
 		}
+	} else {
+		fmt.Printf("Only %d images are available\n", len(tags))
 	}
 	return nil
 }
