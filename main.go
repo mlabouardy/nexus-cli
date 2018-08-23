@@ -93,6 +93,18 @@ func main() {
 						return deleteImage(c)
 					},
 				},
+				{
+					Name:  "size",
+					Usage: "Show total size of image including all tags",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name: "name, n",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						return showTotalImageSize(c)
+					},
+				},
 			},
 		},
 	}
@@ -247,6 +259,44 @@ func deleteImage(c *cli.Context) error {
 				return cli.NewExitError(err.Error(), 1)
 			}
 		}
+	}
+	return nil
+}
+
+func showTotalImageSize(c *cli.Context) error {
+	var imgName = c.String("name")
+	var totalSize (int64) = 0
+
+	if imgName == "" {
+		cli.ShowSubcommandHelp(c)
+	} else {
+		r, err := registry.NewRegistry()
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		tags, err := r.ListTagsByImage(imgName)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		for _, tag := range tags {
+			manifest, err := r.ImageManifest(imgName, tag)
+			if err != nil {
+				return cli.NewExitError(err.Error(), 1)
+			}
+
+			sizeInfo := make(map[string]int64)
+
+			for _, layer := range manifest.Layers {
+				sizeInfo[layer.Digest] = layer.Size
+			}
+
+			for _, size := range sizeInfo {
+				totalSize += size
+			}
+		}
+		fmt.Printf("%d %s\n", totalSize, imgName)
 	}
 	return nil
 }
