@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"strings"
 
 	"github.com/mlabouardy/nexus-cli/registry"
 	"github.com/urfave/cli"
@@ -251,6 +252,14 @@ func deleteImage(c *cli.Context) error {
 					}
 				} else {
 					fmt.Printf("Only %d images are available\n", len(tags))
+				}
+			}
+		} else if strings.Contains(tag, ",") {
+			tags := strings.Split(tag, ",")
+			for _, value := range tags {
+				err = r.DeleteImageByTag(imgName, value)
+				if err != nil {
+					return cli.NewExitError(err.Error(), 1)
 				}
 			}
 		} else {
