@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/BurntSushi/toml"
+	"html"
 	"net/http"
 	"os"
+
+	"github.com/BurntSushi/toml"
 )
 
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
@@ -51,6 +53,7 @@ func NewRegistry() (Registry, error) {
 	if _, err := toml.DecodeFile(CREDENTIALS_FILE, &r); err != nil {
 		return r, err
 	}
+	r.Password = html.UnescapeString(r.Password)
 	return r, nil
 }
 
