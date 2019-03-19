@@ -10,6 +10,7 @@ import (
 )
 
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
+const ACCEPT_HEADER_V1 = "application/vnd.docker.distribution.manifest.v1+json"
 const CREDENTIALS_FILE = ".credentials"
 
 type Registry struct {
@@ -38,6 +39,23 @@ type LayerInfo struct {
 	MediaType string `json:"mediaType"`
 	Size      int64  `json:"size"`
 	Digest    string `json:"digest"`
+}
+
+type ImageTagDetail struct {
+	SchemaVersion int64         `json:"schemaVersion"`
+	Name          string        `json:"name"`
+	Tag           string        `json:"tag"`
+	Architecture  string        `json:"architecture"`
+	FsLayers      []fsLayerInfo `json:"fsLayers"`
+	History       []historyInfo `json:"history"`
+}
+
+type fsLayerInfo struct {
+	BlobSum string `json:"blobSum"`
+}
+
+type historyInfo struct {
+	V1Compatibility string `json:"v1Compatibility"`
 }
 
 func NewRegistry() (Registry, error) {
@@ -133,6 +151,34 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 	json.NewDecoder(resp.Body).Decode(&imageManifest)
 
 	return imageManifest, nil
+
+}
+
+func (r Registry) ImageTagDetail(image string, tag string) (ImageTagDetail, error) {
+	var imageTagDetail ImageTagDetail
+	client := &http.Client{}
+
+	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return imageTagDetail, err
+	}
+	req.SetBasicAuth(r.Username, r.Password)
+	req.Header.Add("Accept", ACCEPT_HEADER_V1)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return imageTagDetail, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return imageTagDetail, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+	}
+
+	json.NewDecoder(resp.Body).Decode(&imageTagDetail)
+
+	return imageTagDetail, nil
 
 }
 

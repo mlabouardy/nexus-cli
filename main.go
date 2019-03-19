@@ -210,11 +210,20 @@ func showImageInfo(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+	tagDetail, err := r.ImageTagDetail(imgName, tag)
+	if err != nil {
+		return cli.NewExitError(err.Error(), 1)
+	}
 	fmt.Printf("Image: %s:%s\n", imgName, tag)
+	fmt.Printf("Architecture: %s\n", tagDetail.Architecture)
 	fmt.Printf("Size: %d\n", manifest.Config.Size)
 	fmt.Println("Layers:")
 	for _, layer := range manifest.Layers {
 		fmt.Printf("\t%s\t%d\n", layer.Digest, layer.Size)
+	}
+	fmt.Println("History:")
+	for _, historyInfo := range tagDetail.History {
+		fmt.Printf("\t%s\n", historyInfo.V1Compatibility)
 	}
 	return nil
 }
