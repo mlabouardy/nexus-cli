@@ -257,14 +257,14 @@ func deleteImage(c *cli.Context) error {
 				}
 				//
 				sort.Slice(imageManifests, func(i, j int) bool {
-					return imageManifests[i].Date.After(imageManifests[j].Date)
+					return imageManifests[i].Date.Before(imageManifests[j].Date)
 				})
 				if err != nil {
 					return cli.NewExitError(err.Error(), 1)
 				}
 				if len(imageManifests) >= keep {
 					for _, tag := range imageManifests[:len(imageManifests)-keep] {
-						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag.Tag)
+						fmt.Printf("%s:%s image will be deleted date: %s...\n", imgName, tag.Tag, tag.Created)
 						r.DeleteImageByTag(imgName, tag.Tag)
 					}
 				} else {
