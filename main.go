@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"sort"
 
-	"github.com/mlabouardy/nexus-cli/registry"
+	"github.com/Allan-Nava/nexus-cli/registry"
 	"github.com/urfave/cli"
 )
 
@@ -183,20 +184,24 @@ func listTagsByImage(c *cli.Context) error {
 	if imgName == "" {
 		cli.ShowSubcommandHelp(c)
 	}
+	var imageManifests []registry.ImageManifestV1
 	tags, err := r.ListTagsByImage(imgName)
-
-	compareStringNumber := func(str1, str2 string) bool {
-		return extractNumberFromString(str1) < extractNumberFromString(str2)
+	for _, tag := range tags {
+		manifest, _ := r.ImageManifestV1(imgName, tag)
+		imageManifests = append(imageManifests, manifest)
 	}
-	Compare(compareStringNumber).Sort(tags)
+	//
+	sort.Slice(imageManifests, func(i, j int) bool {
+		return imageManifests[i].Date.After(imageManifests[j].Date)
+	})
 
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
-	for _, tag := range tags {
-		fmt.Println(tag)
+	for _, image := range imageManifests {
+		fmt.Println(image.Tag, " created: ", image.Created)
 	}
-	fmt.Printf("There are %d images for %s\n", len(tags), imgName)
+	fmt.Printf("There are %d images for %s\n", len(imageManifests), imgName)
 	return nil
 }
 
@@ -241,20 +246,29 @@ func deleteImage(c *cli.Context) error {
 				cli.ShowSubcommandHelp(c)
 			} else {
 				tags, err := r.ListTagsByImage(imgName)
-				compareStringNumber := func(str1, str2 string) bool {
+				/*compareStringNumber := func(str1, str2 string) bool {
 					return extractNumberFromString(str1) < extractNumberFromString(str2)
 				}
-				Compare(compareStringNumber).Sort(tags)
+				Compare(compareStringNumber).Sort(tags)*/
+				var imageManifests []registry.ImageManifestV1
+				for _, tag := range tags {
+					manifest, _ := r.ImageManifestV1(imgName, tag)
+					imageManifests = append(imageManifests, manifest)
+				}
+				//
+				sort.Slice(imageManifests, func(i, j int) bool {
+					return imageManifests[i].Date.After(imageManifests[j].Date)
+				})
 				if err != nil {
 					return cli.NewExitError(err.Error(), 1)
 				}
-				if len(tags) >= keep {
-					for _, tag := range tags[:len(tags)-keep] {
-						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag)
-						r.DeleteImageByTag(imgName, tag)
+				if len(imageManifests) >= keep {
+					for _, tag := range imageManifests[:len(imageManifests)-keep] {
+						fmt.Printf("%s:%s image will be deleted ...\n", imgName, tag.Tag)
+						r.DeleteImageByTag(imgName, tag.Tag)
 					}
 				} else {
-					fmt.Printf("Only %d images are available\n", len(tags))
+					fmt.Printf("Only %d images are available\n", len(imageManifests))
 				}
 			}
 		} else {
