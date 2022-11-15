@@ -29,7 +29,10 @@ jobs:
         run: |
           sudo apt-get install jq
           export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
+          export NEXUS_PLUGIN_ARTIFACT=${NEXUS_ID}.zip
           export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_ID}.md5
+          echo "::set-output name=plugin-id::${GRAFANA_PLUGIN_ID}"
+          echo "::set-output name=archive::${NEXUS_PLUGIN_ARTIFACT}"
           echo "::set-output name=archive-checksum::${NEXUS_ARTIFACTS_CHECKSUM}"
           echo ::set-output name=github-tag::${GITHUB_REF#refs/*/}
       #
