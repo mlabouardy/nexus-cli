@@ -31,7 +31,7 @@ jobs:
           export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
           export NEXUS_PLUGIN_ARTIFACT=${NEXUS_ID}.zip
           export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_ID}.md5
-          echo "::set-output name=plugin-id::${GRAFANA_PLUGIN_ID}"
+          echo "::set-output name=plugin-id::${NEXUS_ID}"
           echo "::set-output name=archive::${NEXUS_PLUGIN_ARTIFACT}"
           echo "::set-output name=archive-checksum::${NEXUS_ARTIFACTS_CHECKSUM}"
           echo ::set-output name=github-tag::${GITHUB_REF#refs/*/}
@@ -45,7 +45,7 @@ jobs:
       - name: Package plugin
         id: package-plugin
         run: |
-          mv dist ${{ steps.metadata.outputs.plugin-id }}
+          mv nexus-cli ${{ steps.metadata.outputs.plugin-id }}
           zip ${{ steps.metadata.outputs.archive }} ${{ steps.metadata.outputs.plugin-id }} -r
           md5sum ${{ steps.metadata.outputs.archive }} > ${{ steps.metadata.outputs.archive-checksum }}
           echo "::set-output name=checksum::$(cat ./${{ steps.metadata.outputs.archive-checksum }} | cut -d' ' -f1)"
