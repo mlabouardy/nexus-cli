@@ -46,8 +46,7 @@ jobs:
       
       - name: Package plugin
         id: package-plugin
-        run: |
-          mv nexus-cli ${{ steps.metadata.outputs.plugin-id }}
+        run: |fix 
           zip ${{ steps.metadata.outputs.archive }} ${{ steps.metadata.outputs.plugin-id }} -r
           md5sum ${{ steps.metadata.outputs.archive }} > ${{ steps.metadata.outputs.archive-checksum }}
           echo "::set-output name=checksum::$(cat ./${{ steps.metadata.outputs.archive-checksum }} | cut -d' ' -f1)"
