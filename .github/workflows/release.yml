@@ -1,0 +1,38 @@
+name: Release
+#
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*.*.*'
+#
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    #
+    steps:
+      - uses: actions/checkout@v3
+      #
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.17'
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Read changelog
+        id: changelog
+        run: |
+          awk '/^## / {s++} s == 1 {print}' CHANGELOG.md > release_notes.md
+          echo "::set-output name=path::release_notes.md"
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: ${{ steps.changelog.outputs.path }}
+          draft: true
+#
