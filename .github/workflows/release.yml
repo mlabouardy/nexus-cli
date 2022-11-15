@@ -20,6 +20,19 @@ jobs:
           go-version: '1.19'
       - name: Install dependencies
         run: go mod tidy
+      
+      - name: Build go
+        run: go build .
+      
+      - name: Get plugin metadata
+        id: metadata
+        run: |
+          sudo apt-get install jq
+          export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
+          export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_ID}.md5
+          echo "::set-output name=archive-checksum::${NEXUS_ARTIFACTS_CHECKSUM}"
+          echo ::set-output name=github-tag::${GITHUB_REF#refs/*/}
+      #
       - name: Read changelog
         id: changelog
         run: |
@@ -35,4 +48,26 @@ jobs:
           release_name: Release ${{ github.ref }}
           body_path: ${{ steps.changelog.outputs.path }}
           draft: true
+      #
+      - name: Add plugin to release
+        id: upload-plugin-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.metadata.outputs.archive }}
+          asset_name: ${{ steps.metadata.outputs.archive }}
+          asset_content_type: application/zip
+      #
+      - name: Add checksum to release
+        id: upload-checksum-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.metadata.outputs.archive-checksum }}
+          asset_name: ${{ steps.metadata.outputs.archive-checksum }}
+          asset_content_type: text/plain
 #
