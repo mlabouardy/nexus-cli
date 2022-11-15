@@ -28,7 +28,7 @@ jobs:
         id: metadata
         run: |
           sudo apt-get install jq
-          export NEXUS_ID="nexus-cli"
+          export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
           export NEXUS_VERSION=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
           export NEXUS_PLUGIN_ARTIFACT=${NEXUS_VERSION}
           export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_VERSION}.md5
