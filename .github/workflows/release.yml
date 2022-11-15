@@ -1,0 +1,92 @@
+name: Release
+#
+on:
+  push:
+    #branches:
+    #  - master
+    tags:
+      - 'v*.*.*'
+#
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    #
+    steps:
+      - uses: actions/checkout@v3
+      #
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+      - name: Install dependencies
+        run: go mod tidy
+      
+      - name: Build go
+        run: go build .
+      
+      - name: Get plugin metadata
+        id: metadata
+        run: |
+          sudo apt-get install jq
+          export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
+          export NEXUS_VERSION=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
+          export NEXUS_PLUGIN_ARTIFACT=nexus-cli-${NEXUS_VERSION}.zip
+          export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_VERSION}.md5
+          echo "::set-output name=plugin-id::nexus-cli"
+          echo "::set-output name=plugin-version::${NEXUS_VERSION}"
+          echo "::set-output name=archive::${NEXUS_PLUGIN_ARTIFACT}"
+          echo "::set-output name=archive-checksum::${NEXUS_ARTIFACTS_CHECKSUM}"
+          echo ::set-output name=github-tag::${GITHUB_REF#refs/*/}
+      #
+      - name: Read changelog
+        id: changelog
+        run: |
+          awk '/^## / {s++} s == 1 {print}' CHANGELOG.md > release_notes.md
+          echo "::set-output name=path::release_notes.md"
+      
+      - name: Package plugin
+        id: package-plugin
+        run: |
+          zip ${{ steps.metadata.outputs.archive }} nexus-cli -r
+          md5sum ${{ steps.metadata.outputs.archive }} > ${{ steps.metadata.outputs.archive-checksum }}
+          echo "::set-output name=checksum::$(cat ./${{ steps.metadata.outputs.archive-checksum }} | cut -d' ' -f1)"
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: ${{ steps.changelog.outputs.path }}
+          draft: true
+      #
+      - name: Add plugin to release
+        id: upload-plugin-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.metadata.outputs.archive }}
+          asset_name: ${{ steps.metadata.outputs.archive }}
+          asset_content_type: application/zip
+      #
+      - name: Add checksum to release
+        id: upload-checksum-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.metadata.outputs.archive-checksum }}
+          asset_name: ${{ steps.metadata.outputs.archive-checksum }}
+          asset_content_type: text/plain
+      #
+      - name: Publish to Release
+        run: |
+          echo A draft release has been created for your plugin. Please review and publish it. 
+          echo
+          echo '{ "id": "${{ steps.metadata.outputs.plugin-id }}", "type": "${{ steps.metadata.outputs.plugin-type }}", "url": "https://github.com/${{ github.repository }}", "versions": [ { "version": "${{ steps.metadata.outputs.plugin-version }}", "commit": "${{ github.sha }}", "url": "https://github.com/${{ github.repository }}", "download": { "any": { "url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.metadata.outputs.plugin-version }}/${{ steps.metadata.outputs.archive }}", "md5": "${{ steps.package-plugin.outputs.checksum }}" } } } ] }' | jq 
+#

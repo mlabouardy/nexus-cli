@@ -4,11 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/BurntSushi/toml"
+	"io"
+	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/tidwall/gjson"
 )
 
+const ACCEPT_HEADER_V1 = "application/vnd.docker.distribution.manifest.v1+json"
 const ACCEPT_HEADER = "application/vnd.docker.distribution.manifest.v2+json"
 const CREDENTIALS_FILE = ".credentials"
 
@@ -38,6 +44,15 @@ type LayerInfo struct {
 	MediaType string `json:"mediaType"`
 	Size      int64  `json:"size"`
 	Digest    string `json:"digest"`
+}
+
+type ImageManifestV1 struct {
+	SchemaVersion int64  `json:"schemaVersion"`
+	Name          string `json:"name"`
+	Tag           string `json:"tag"`
+	Architecture  string `json:"architecture"`
+	Created       string
+	Date          time.Time
 }
 
 func NewRegistry() (Registry, error) {
@@ -134,6 +149,45 @@ func (r Registry) ImageManifest(image string, tag string) (ImageManifest, error)
 
 	return imageManifest, nil
 
+}
+
+func (r Registry) ImageManifestV1(image string, tag string) (ImageManifestV1, error) {
+	var imageManifest ImageManifestV1
+	client := &http.Client{}
+
+	url := fmt.Sprintf("%s/repository/%s/v2/%s/manifests/%s", r.Host, r.Repository, image, tag)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return imageManifest, err
+	}
+	req.SetBasicAuth(r.Username, r.Password)
+	req.Header.Add("Accept", ACCEPT_HEADER_V1)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return imageManifest, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return imageManifest, errors.New(fmt.Sprintf("HTTP Code: %d", resp.StatusCode))
+	}
+	b, err := io.ReadAll(resp.Body)
+	// b, err := ioutil.ReadAll(resp.Body)  Go.1.15 and earlier
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//json.NewDecoder(resp.Body).Decode(&imageManifest)
+	compatibilityString := gjson.GetBytes(b, `history.0.v1Compatibility`)
+	created := gjson.Get(compatibilityString.String(), `created`)
+	imageManifest.Created = created.String()
+	imageManifest.Date = created.Time()
+	imageManifest.Tag = gjson.GetBytes(b, `tag`).String()
+	imageManifest.Name = gjson.GetBytes(b, `name`).String()
+	imageManifest.Architecture = gjson.GetBytes(b, `architecture`).String()
+	imageManifest.SchemaVersion = gjson.GetBytes(b, `schemaVersion`).Int()
+	//
+	return imageManifest, nil
 }
 
 func (r Registry) DeleteImageByTag(image string, tag string) error {
