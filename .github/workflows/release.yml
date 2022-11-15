@@ -41,6 +41,15 @@ jobs:
         run: |
           awk '/^## / {s++} s == 1 {print}' CHANGELOG.md > release_notes.md
           echo "::set-output name=path::release_notes.md"
+      
+      - name: Package plugin
+        id: package-plugin
+        run: |
+          mv dist ${{ steps.metadata.outputs.plugin-id }}
+          zip ${{ steps.metadata.outputs.archive }} ${{ steps.metadata.outputs.plugin-id }} -r
+          md5sum ${{ steps.metadata.outputs.archive }} > ${{ steps.metadata.outputs.archive-checksum }}
+          echo "::set-output name=checksum::$(cat ./${{ steps.metadata.outputs.archive-checksum }} | cut -d' ' -f1)"
+
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
