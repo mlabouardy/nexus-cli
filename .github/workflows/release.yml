@@ -30,7 +30,7 @@ jobs:
           sudo apt-get install jq
           export NEXUS_ID=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
           export NEXUS_VERSION=$(md5sum nexus-cli |  sort | md5sum  | cut -f1  -d ' ')
-          export NEXUS_PLUGIN_ARTIFACT=${NEXUS_VERSION}
+          export NEXUS_PLUGIN_ARTIFACT=nexus-cli-${NEXUS_VERSION}.zip
           export NEXUS_ARTIFACTS_CHECKSUM=${NEXUS_VERSION}.md5
           echo "::set-output name=plugin-id::${NEXUS_ID}"
           echo "::set-output name=plugin-version::${NEXUS_VERSION}"
